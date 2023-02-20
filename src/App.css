@@ -1,38 +1,42 @@
-.App {
-  text-align: center;
+.text-container {
+    background-color: red;
+    width: 100%;
+    padding-top: 100%; /* 1:1 Aspect Ratio */
+    position: relative; /* If you want text inside of it */
+}
+  
+  /* If you want text inside of the container */
+.text-div {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.sudoku-cell {
+    border: 1px solid #0275d8;
+    border-radius: 0.25rem;
+    font-family: monospace;
+    padding: 0.5rem;
+    outline: none !important;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.sudoku-cell:focus {
+    background-color: #89d7f1;
+    color: #DC4C64;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+.sudoku-grid {
+    margin-top: 0.5rem;
+    display: grid;
+    grid-template-columns: repeat(9, 4%);
+    justify-content: center;
 }
 
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.sudoku-square {
+    aspect-ratio: 1/ 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
