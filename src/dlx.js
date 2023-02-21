@@ -240,7 +240,7 @@ class SparseMatrix {
 		this.uncover_control_col(min);
 	}
 
-	algorithm_x() {
+	algorithm_x(genMode = false, depth = 0) {
 		if (this.entryNode.right === this.entryNode) {
 			//valid solution
 			this.solutions.push(JSON.parse(JSON.stringify(this.selected_rows)));
@@ -253,6 +253,14 @@ class SparseMatrix {
 		for (st = st.right; st !== this.entryNode; st = st.right) {
 			if (st.num < s) {
 				min = st;
+			}
+		}
+		if (genMode && depth < 7) {
+			//get a random no from 1 to DIM * DIM * COL_EXTEND
+			let jumps = Math.floor(Math.random() * 100);
+			for (let i = 0; i < jumps; i++, min = min.right) {}
+			if (min === this.entryNode) {
+				min = min.right;
 			}
 		}
 
@@ -270,7 +278,7 @@ class SparseMatrix {
 			for (let n3 = n2.right; n2 !== n3; n3 = n3.right) {
 				this.cover_entire_column(n3.header);
 			}
-			this.algorithm_x();
+			this.algorithm_x(genMode, depth + 1);
 			if (this.solutions.length >= this.sol_limit) {
 				return;
 			}
@@ -395,6 +403,14 @@ function find_sol(tar) {
 	}
 }
 
-export default find_sol;
+function create_puzzle() {
+	let m = new SparseMatrix();
+	m.algorithm_x(true);
+	return m.get_sudoku_grid(m.solutions[0]);
+}
+
+// create_puzzle();
+
+export { find_sol, create_puzzle };
 
 // testing_code();

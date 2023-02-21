@@ -1,6 +1,6 @@
 import './App.css';
 import { useState, React } from 'react';
-import find_sol from './dlx';
+import { find_sol, create_puzzle } from './dlx';
 
 function isSudokuDigit(r) {
 	return r <= 9 && r > 0;
@@ -101,43 +101,28 @@ function get_no_errors() {
 }
 
 function App() {
-	const initialVals = {
-		history: [
-			{
-				grid: [
-					[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-					[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-					[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-					[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-					[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-					[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-					[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-					[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-					[-1, -1, -1, -1, -1, -1, -1, -1, -1],
-				],
-				solution: undefined,
-				errors: get_no_errors(),
-			},
-		],
+	const ini_grid = create_puzzle();
+	const [vals, setVals] = useState({
+		solution: ini_grid,
+		errors: get_no_errors(),
+		grid: ini_grid.map((t) =>
+			t.map((e) => (Math.floor(Math.random() * 4) !== 3 ? -1 : e))
+		),
 		isTogglingSol: false,
-	};
-	let first_sol = find_sol(initialVals.history[0].grid).sol;
-	initialVals.history[0].solution = first_sol;
-	const [vals, setVals] = useState(initialVals);
+	});
 	return (
 		<div className='app'>
 			<SudokuGrid
 				vals={
-					vals.isTogglingSol &&
-					vals.history[vals.history.length - 1].solution !== undefined
-						? vals.history[vals.history.length - 1].solution
-						: vals.history[vals.history.length - 1].grid
+					vals.isTogglingSol && vals.solution !== undefined
+						? vals.solution
+						: vals.grid
 				}
 				isTogglingSol={vals.isTogglingSol}
-				errors={vals.history[vals.history.length - 1].errors}
+				errors={vals.errors}
 				handleNewVal={(nv) => {
 					setVals((prevVals) => {
-						let newg = nv(prevVals.history[prevVals.history.length - 1].grid);
+						let newg = nv(prevVals.grid);
 						let sols = undefined;
 						let errors = get_no_errors();
 						let r;
@@ -147,21 +132,28 @@ function App() {
 								sols = r.sol;
 							} else if (r.errors !== undefined) {
 								//highlight the wrong nums
-								r.errors.forEach(({ row, col }) => {
-									errors[row][col] = 1;
-								});
+								if (r.errors.length === 0) {
+									errors.forEach((t) => {
+										for (let i = 0; i < t.length; i++) {
+											t[i] = 1;
+										}
+									});
+								} else {
+									r.errors.forEach(({ row, col }) => {
+										errors[row][col] = 1;
+									});
+								}
 							} else {
 								console.log('undefined');
 							}
 						} catch (ex) {
-							console.log('Too few clues to decode');
-							errors.forEach((t) => t.map((_r) => 1));
+							console.log('Too few clues to solve');
+							errors = errors.map((t) => t.map((_r) => 1));
 						} finally {
 							return {
-								history: [
-									...prevVals.history,
-									{ grid: newg, solution: sols, errors: errors },
-								],
+								grid: newg,
+								solution: sols,
+								errors: errors,
 								isTogglingSol: prevVals.isTogglingSol,
 							};
 						}
@@ -170,14 +162,13 @@ function App() {
 			/>
 			<SudokuSolutionButton
 				onPointerDownHandler={() => {
-					console.log(vals);
 					setVals((prevVals) => {
-						return { history: prevVals.history, isTogglingSol: true };
+						return { ...prevVals, isTogglingSol: true };
 					});
 				}}
 				onPointerUpHandler={() => {
 					setVals((prevVals) => {
-						return { history: prevVals.history, isTogglingSol: false };
+						return { ...prevVals, isTogglingSol: false };
 					});
 				}}
 			/>
