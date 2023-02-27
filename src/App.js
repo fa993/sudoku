@@ -100,14 +100,11 @@ function get_no_errors() {
 	];
 }
 
-function App() {
-	const ini_grid = create_puzzle();
+function Sudoku({ ini_sol, ini_grid }) {
 	const [vals, setVals] = useState({
-		solution: ini_grid,
+		solution: ini_sol,
 		errors: get_no_errors(),
-		grid: ini_grid.map((t) =>
-			t.map((e) => (Math.floor(Math.random() * 4) !== 3 ? -1 : e))
-		),
+		grid: ini_grid,
 		isTogglingSol: false,
 	});
 	return (
@@ -144,7 +141,8 @@ function App() {
 									});
 								}
 							} else {
-								console.log('undefined');
+								console.log('Too few clues to solve');
+								errors = errors.map((t) => t.map((_r) => 1));
 							}
 						} catch (ex) {
 							console.log('Too few clues to solve');
@@ -174,6 +172,14 @@ function App() {
 			/>
 		</div>
 	);
+}
+
+function App() {
+	const ini_val = create_puzzle();
+	const ini_g = ini_val.map((t) =>
+		t.map((e) => (Math.floor(Math.random() * 4) !== 3 ? -1 : e))
+	);
+	return <Sudoku ini_grid={ini_g} ini_sol={ini_val} />;
 }
 
 export default App;
