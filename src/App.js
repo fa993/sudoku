@@ -1,6 +1,7 @@
 import './App.css';
-import { useState, React } from 'react';
-import { find_sol, create_puzzle } from './dlx';
+import { useState, React, useEffect } from 'react';
+import { create_puzzle } from './dlx';
+import { v4 as uuidv4 } from 'uuid';
 
 function isSudokuDigit(r) {
 	return r <= 9 && r > 0;
@@ -73,14 +74,18 @@ function SudokuGrid({ vals, errors, handleNewVal, isTogglingSol }) {
 	return <div className='sudoku-grid'>{cells}</div>;
 }
 
-function SudokuSolutionButton({ onPointerDownHandler, onPointerUpHandler }) {
+function SudokuSolutionButton({
+	onPointerDownHandler,
+	onPointerUpHandler,
+	busy,
+}) {
 	return (
 		<div className='sudoku-button'>
 			<button
 				onPointerDown={onPointerDownHandler}
 				onPointerUp={onPointerUpHandler}
 			>
-				Reveal Solution
+				{busy ? 'Calculating solution... please wait' : 'Reveal Solution'}
 			</button>
 		</div>
 	);
@@ -100,61 +105,60 @@ function get_no_errors() {
 	];
 }
 
+const worker = new Worker(new URL('./worker.js', import.meta.url), {
+	type: 'module',
+});
+
 function Sudoku({ ini_sol, ini_grid }) {
 	const [vals, setVals] = useState({
-		solution: ini_sol,
-		errors: get_no_errors(),
+		id: uuidv4(),
 		grid: ini_grid,
 		isTogglingSol: false,
+		busy: false,
+	});
+	const [solVals, setSolVals] = useState({
+		solution: ini_sol,
+		errors: get_no_errors(),
+	});
+	useEffect(() => {
+		const evh = (event) => {
+			let ans = JSON.parse(event.data.jsondat);
+			if (ans.id !== vals.id) {
+				console.log('Old data discarding Exp:' + vals.id + ' Got:' + ans.id);
+				return;
+			}
+			setSolVals({
+				solution: ans.solution,
+				errors: ans.errors,
+			});
+			setVals({ ...vals, busy: false });
+		};
+		worker.addEventListener('message', evh);
+		return () => worker.removeEventListener('message', evh);
 	});
 	return (
 		<div className='app'>
 			<SudokuGrid
 				vals={
-					vals.isTogglingSol && vals.solution !== undefined
-						? vals.solution
+					vals.isTogglingSol && solVals.solution !== undefined && !vals.busy
+						? solVals.solution
 						: vals.grid
 				}
 				isTogglingSol={vals.isTogglingSol}
-				errors={vals.errors}
+				errors={solVals.errors}
 				handleNewVal={(nv) => {
 					setVals((prevVals) => {
 						let newg = nv(prevVals.grid);
-						let sols = undefined;
-						let errors = get_no_errors();
-						let r;
-						try {
-							r = find_sol(newg);
-							if (r.sol !== undefined) {
-								sols = r.sol;
-							} else if (r.errors !== undefined) {
-								//highlight the wrong nums
-								if (r.errors.length === 0) {
-									errors.forEach((t) => {
-										for (let i = 0; i < t.length; i++) {
-											t[i] = 1;
-										}
-									});
-								} else {
-									r.errors.forEach(({ row, col }) => {
-										errors[row][col] = 1;
-									});
-								}
-							} else {
-								console.log('Too few clues to solve');
-								errors = errors.map((t) => t.map((_r) => 1));
-							}
-						} catch (ex) {
-							console.log('Too few clues to solve');
-							errors = errors.map((t) => t.map((_r) => 1));
-						} finally {
-							return {
-								grid: newg,
-								solution: sols,
-								errors: errors,
-								isTogglingSol: prevVals.isTogglingSol,
-							};
-						}
+						let newid = uuidv4();
+						worker.postMessage({
+							jsondat: JSON.stringify({ ...solVals, newg: newg, id: newid }),
+						});
+						return {
+							busy: true,
+							id: newid,
+							grid: newg,
+							isTogglingSol: prevVals.isTogglingSol,
+						};
 					});
 				}}
 			/>
@@ -169,6 +173,7 @@ function Sudoku({ ini_sol, ini_grid }) {
 						return { ...prevVals, isTogglingSol: false };
 					});
 				}}
+				busy={vals.busy}
 			/>
 		</div>
 	);

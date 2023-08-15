@@ -12,7 +12,8 @@
 }
 
 .sudoku-error {
-    color: #DC4C64;
+    /* color: #DC4C64; */
+    background-color: #DC4C64;
 }
 
 .sudoku-grid {
