@@ -1,5 +1,5 @@
 import './App.css';
-import { useState, React, useEffect } from 'react';
+import { useState, React, useEffect, useRef } from 'react';
 import { create_puzzle } from './dlx';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -125,7 +125,7 @@ function Sudoku({ ini_sol, ini_grid }) {
 	const [clues, setClues] = useState(20);
 	const [vals, setVals] = useState({
 		id: uuidv4(),
-		grid: ini_grid,
+		grid: [ini_grid],
 		isTogglingSol: false,
 		busy: false,
 	});
@@ -149,19 +149,34 @@ function Sudoku({ ini_sol, ini_grid }) {
 		worker.addEventListener('message', evh);
 		return () => worker.removeEventListener('message', evh);
 	});
+	useEffect(() => {
+		const evh = (e) => {
+			if (!(undoRef && undoRef.current)) {
+				return;
+			}
+			console.log(e.key);
+			if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+				undoRef.current.click();
+				e.preventDefault();
+			}
+		};
+		document.addEventListener('keydown', evh);
+		return () => document.removeEventListener('keydown', evh);
+	});
+	const undoRef = useRef(null);
 	return (
 		<div className='app'>
 			<SudokuGrid
 				vals={
 					vals.isTogglingSol && solVals.solution !== undefined && !vals.busy
 						? solVals.solution
-						: vals.grid
+						: vals.grid[0]
 				}
 				isTogglingSol={vals.isTogglingSol}
 				errors={solVals.errors}
 				handleNewVal={(nv) => {
 					setVals((prevVals) => {
-						let newg = nv(prevVals.grid);
+						let newg = nv(prevVals.grid[0]);
 						let newid = uuidv4();
 						worker.postMessage({
 							jsondat: JSON.stringify({ ...solVals, newg: newg, id: newid }),
@@ -169,7 +184,7 @@ function Sudoku({ ini_sol, ini_grid }) {
 						return {
 							busy: true,
 							id: newid,
-							grid: newg,
+							grid: [newg].concat(prevVals.grid),
 							isTogglingSol: prevVals.isTogglingSol,
 						};
 					});
@@ -199,7 +214,7 @@ function Sudoku({ ini_sol, ini_grid }) {
 						);
 						setVals({
 							id: uuidv4(),
-							grid: ini_grid,
+							grid: [ini_grid],
 							isTogglingSol: false,
 							busy: false,
 						});
@@ -221,7 +236,7 @@ function Sudoku({ ini_sol, ini_grid }) {
 				<button
 					onClick={(e) => {
 						setVals((prevVals) => {
-							let posses = prevVals.grid
+							let posses = prevVals.grid[0]
 								.map((t, i) =>
 									t
 										.map((t4, j2) => {
@@ -236,17 +251,39 @@ function Sudoku({ ini_sol, ini_grid }) {
 							}
 							posses.sort(() => Math.random() - 0.5);
 							let num = get_pos_to_show(posses, 1)[0];
-							let newg = JSON.parse(JSON.stringify(prevVals.grid));
+							let newg = JSON.parse(JSON.stringify(prevVals.grid[0]));
 							newg[Math.floor(num / 9)][num % 9] =
 								solVals.solution[Math.floor(num / 9)][num % 9];
 							return {
 								...prevVals,
-								grid: newg,
+								grid: [newg].concat(prevVals.grid),
 							};
 						});
 					}}
 				>
 					Reveal A Clue
+				</button>
+				<button
+					ref={undoRef}
+					onClick={(e) => {
+						if (vals.grid.length <= 1) {
+							return;
+						}
+						setVals((prevVals) => {
+							const newid = uuidv4();
+							let newg = prevVals.grid.slice(1);
+							worker.postMessage({
+								jsondat: JSON.stringify({
+									...solVals,
+									newg: newg[0],
+									id: newid,
+								}),
+							});
+							return { ...prevVals, grid: newg, id: newid };
+						});
+					}}
+				>
+					Undo
 				</button>
 			</div>
 		</div>
