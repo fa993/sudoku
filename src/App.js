@@ -118,15 +118,11 @@ function gen_random_arr() {
 }
 
 function get_pos_to_show(nums, clues) {
-	return nums.slice(0, clues + 1);
+	return nums.slice(0, clues);
 }
 
-function Sudoku({ ini_sol, nums }) {
+function Sudoku({ ini_sol, ini_grid }) {
 	const [clues, setClues] = useState(20);
-	const posses = get_pos_to_show(nums, clues);
-	const ini_grid = ini_sol.map((t, i) =>
-		t.map((tin, j) => (posses.includes(i * 9 + j) ? tin : -1))
-	);
 	const [vals, setVals] = useState({
 		id: uuidv4(),
 		grid: ini_grid,
@@ -193,30 +189,84 @@ function Sudoku({ ini_sol, nums }) {
 					}}
 					busy={vals.busy}
 				/>
+				<button
+					onClick={(e) => {
+						const nums = gen_random_arr();
+						const posses = get_pos_to_show(nums, clues);
+						const ini_sol = create_puzzle();
+						const ini_grid = ini_sol.map((t, i) =>
+							t.map((tin, j) => (posses.includes(i * 9 + j) ? tin : -1))
+						);
+						setVals({
+							id: uuidv4(),
+							grid: ini_grid,
+							isTogglingSol: false,
+							busy: false,
+						});
+						setSolVals({
+							solution: ini_sol,
+							errors: get_no_errors(),
+						});
+					}}
+				>
+					New Game
+				</button>
 				<input
 					type='number'
 					value={clues}
 					onChange={(e) => {
-						setClues(e.target.value);
-						const p = get_pos_to_show(nums, Number(e.target.value));
-						const grid = solVals.solution.map((t, i) =>
-							t.map((tin, j) => (p.includes(i * 9 + j) ? tin : -1))
-						);
-						setVals({
-							...vals,
-							grid: grid,
-						});
+						setClues(Number(e.target.value));
 					}}
 				/>
+				<button
+					onClick={(e) => {
+						setVals((prevVals) => {
+							let posses = prevVals.grid
+								.map((t, i) =>
+									t
+										.map((t4, j2) => {
+											return { val: t4, ind: j2 };
+										})
+										.filter((t3) => t3.val === -1)
+										.map((t2) => i * 9 + t2.ind)
+								)
+								.reduce((a, e) => a.concat(e), []);
+							if (posses.length === 0) {
+								return prevVals;
+							}
+							posses.sort(() => Math.random() - 0.5);
+							let num = get_pos_to_show(posses, 1)[0];
+							let newg = JSON.parse(JSON.stringify(prevVals.grid));
+							newg[Math.floor(num / 9)][num % 9] =
+								solVals.solution[Math.floor(num / 9)][num % 9];
+							return {
+								...prevVals,
+								grid: newg,
+							};
+						});
+					}}
+				>
+					Reveal A Clue
+				</button>
 			</div>
 		</div>
 	);
 }
 
 function App() {
-	const ini_val = create_puzzle();
+	const cl = 20;
 	const nums = gen_random_arr();
-	return <Sudoku ini_sol={ini_val} nums={nums} />;
+	const posses = get_pos_to_show(nums, cl);
+	const ini_sol = create_puzzle();
+	const ini_grid = ini_sol.map((t, i) =>
+		t.map((tin, j) => (posses.includes(i * 9 + j) ? tin : -1))
+	);
+	return (
+		<div>
+			<Sudoku ini_sol={ini_sol} ini_grid={ini_grid} />
+			<div className='customizer'></div>
+		</div>
+	);
 }
 
 export default App;
