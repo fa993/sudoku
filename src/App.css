@@ -30,12 +30,18 @@
     justify-content: center;
 }
 
-/* .app {
-    display: flex;
-    flex-direction: column;
-} */
-
 .sudoku-button {
+    display: contents;
     margin: 1rem;
     text-align: center;
+}
+
+.customizer {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-items: center;
+    align-content: center;
+    justify-content: center;
+    gap: 10px;
 }

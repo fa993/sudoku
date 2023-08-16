@@ -109,7 +109,24 @@ const worker = new Worker(new URL('./worker.js', import.meta.url), {
 	type: 'module',
 });
 
-function Sudoku({ ini_sol, ini_grid }) {
+function gen_random_arr() {
+	const numbers = Array(81)
+		.fill()
+		.map((_, i) => i);
+	numbers.sort(() => Math.random() - 0.5);
+	return numbers;
+}
+
+function get_pos_to_show(nums, clues) {
+	return nums.slice(0, clues + 1);
+}
+
+function Sudoku({ ini_sol, nums }) {
+	const [clues, setClues] = useState(20);
+	const posses = get_pos_to_show(nums, clues);
+	const ini_grid = ini_sol.map((t, i) =>
+		t.map((tin, j) => (posses.includes(i * 9 + j) ? tin : -1))
+	);
 	const [vals, setVals] = useState({
 		id: uuidv4(),
 		grid: ini_grid,
@@ -162,29 +179,44 @@ function Sudoku({ ini_sol, ini_grid }) {
 					});
 				}}
 			/>
-			<SudokuSolutionButton
-				onPointerDownHandler={() => {
-					setVals((prevVals) => {
-						return { ...prevVals, isTogglingSol: true };
-					});
-				}}
-				onPointerUpHandler={() => {
-					setVals((prevVals) => {
-						return { ...prevVals, isTogglingSol: false };
-					});
-				}}
-				busy={vals.busy}
-			/>
+			<div className='customizer'>
+				<SudokuSolutionButton
+					onPointerDownHandler={() => {
+						setVals((prevVals) => {
+							return { ...prevVals, isTogglingSol: true };
+						});
+					}}
+					onPointerUpHandler={() => {
+						setVals((prevVals) => {
+							return { ...prevVals, isTogglingSol: false };
+						});
+					}}
+					busy={vals.busy}
+				/>
+				<input
+					type='number'
+					value={clues}
+					onChange={(e) => {
+						setClues(e.target.value);
+						const p = get_pos_to_show(nums, Number(e.target.value));
+						const grid = solVals.solution.map((t, i) =>
+							t.map((tin, j) => (p.includes(i * 9 + j) ? tin : -1))
+						);
+						setVals({
+							...vals,
+							grid: grid,
+						});
+					}}
+				/>
+			</div>
 		</div>
 	);
 }
 
 function App() {
 	const ini_val = create_puzzle();
-	const ini_g = ini_val.map((t) =>
-		t.map((e) => (Math.floor(Math.random() * 4) !== 3 ? -1 : e))
-	);
-	return <Sudoku ini_grid={ini_g} ini_sol={ini_val} />;
+	const nums = gen_random_arr();
+	return <Sudoku ini_sol={ini_val} nums={nums} />;
 }
 
 export default App;
